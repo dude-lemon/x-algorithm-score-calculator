@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X Algorithm Score Calculator</title>
+<meta name="description" content="See how the X For You ranking scores a post, using the real public weights from the open source X algorithm.">
+<meta property="og:title" content="X Algorithm Score Calculator">
+<meta property="og:description" content="See how the X For You ranking scores a post, using the real public weights from the open source X algorithm.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dude-lemon.github.io/x-algorithm-score-calculator/">
+<meta property="og:image" content="https://dude-lemon.github.io/x-algorithm-score-calculator/assets/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316171a'/%3E%3Crect x='7' y='17' width='4' height='8' rx='1' fill='%234cc38a'/%3E%3Crect x='14' y='11' width='4' height='14' rx='1' fill='%23f0a83a'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%234cc38a'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#0b0b0c; --card:#16171a; --line:#2a2b30; --text:#eceae4; --muted:#9a988f; --pos:#4cc38a; --neg:#e5484d; --acc:#f0a83a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; }
+  .wrap { max-width:1080px; margin:0 auto; padding:40px 24px 64px; }
+  h1 { font-weight:300; font-size:38px; margin:0 0 8px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); margin:0 0 28px; max-width:720px; }
+  .grid { display:grid; grid-template-columns: 1.2fr 1fr; gap:24px; }
+  @media (max-width: 860px) { .grid { grid-template-columns:1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:22px; }
+  .card h2 { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 14px; }
+  .row { display:grid; grid-template-columns: 170px 1fr 58px 70px; gap:12px; align-items:center; padding:7px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:none; }
+  .row label { font-size:14px; }
+  .row .w { color:var(--muted); font-size:12px; text-align:right; font-variant-numeric:tabular-nums; }
+  .row output { text-align:right; font-variant-numeric:tabular-nums; }
+  input[type=range] { width:100%; accent-color:var(--acc); }
+  .neg label { color:#f3b4b6; }
+  .opts { display:grid; gap:12px; margin-top:6px; }
+  .opt { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:14px; }
+  select { background:#0f1012; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; }
+  .switch { display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .score { font-weight:200; font-size:64px; line-height:1; font-variant-numeric:tabular-nums; margin:6px 0 4px; }
+  .score.bad { color:var(--neg); }
+  .mult { color:var(--muted); font-size:13px; margin-bottom:18px; }
+  .bars { display:grid; gap:8px; }
+  .bar { display:grid; grid-template-columns: 130px 1fr 60px; gap:10px; align-items:center; font-size:13px; }
+  .track { position:relative; height:12px; background:#0f1012; border-radius:6px; overflow:hidden; }
+  .fill { position:absolute; top:0; bottom:0; border-radius:6px; }
+  .bar span:last-child { text-align:right; font-variant-numeric:tabular-nums; color:var(--muted); }
+  .note { color:var(--muted); font-size:13px; margin-top:22px; line-height:1.6; }
+  .note code { color:var(--text); }
+  a { color:var(--acc); }
+  .foot { margin-top:28px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>X Algorithm Score Calculator</h1>
+  <p class="sub">X ranks your For You feed by predicting how likely you are to take each action on a post, then multiplying each prediction by a weight. Move the sliders to say what share of viewers you think will do each thing, and see how the public weights add it up.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Out of 100 viewers, how many will...</h2>
+      <div id="rows"></div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Score</h2>
+        <div class="score" id="score">0.00</div>
+        <div class="mult" id="mult"></div>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="card" style="margin-top:24px">
+        <h2>Who is seeing it</h2>
+        <div class="opts">
+          <label class="opt switch"><span>Viewer follows you</span><input type="checkbox" id="follows" checked></label>
+          <label class="opt switch"><span>You follow each other (mutuals)</span><input type="checkbox" id="mutual"></label>
+          <label class="opt switch"><span>It's an original post (not a reply or repost)</span><input type="checkbox" id="original" checked></label>
+          <div class="opt"><span>Your posts already in this feed</span>
+            <select id="pos"><option value="0">This is the first</option><option value="1">This is the second</option><option value="2">Third or later</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Weights come from <code>home-mixer/params/param.rs</code> and the multipliers from <code>vm-ranker/params.rs</code> in
+    <a href="https://github.com/xai-org/x-algorithm">xai-org/x-algorithm</a> (commit 9081b33, November 2026).
+    In the real system the inputs are the model's predictions for one specific viewer, not counts, and it also uses dwell time, clicks into photos and quoted posts, and a few other signals left out here.
+    The mutual follow boost adds 15 to the reply weight for original posts from accounts you follow that also follow you.
+    Posts from accounts the viewer doesn't follow are multiplied by 0.75. Each extra post from the same author in one feed is multiplied by 0.5, down to 0.25.
+    This is a teaching tool. It can't predict the reach of any real post.
+  </p>
+  <p class="foot">Not affiliated with X. Made by <a href="https://dudelemon.com">Dude Lemon</a>. MIT licensed, <a href="https://github.com/dude-lemon/x-algorithm-score-calculator">source on GitHub</a>.</p>
+</div>
+
+<script>
+const ACTIONS = [
+  { id:'favorite',  label:'Like',                 w:0.708,  v:6 },
+  { id:'reply',     label:'Reply',                w:5.0,    v:1 },
+  { id:'retweet',   label:'Repost',               w:1.0,    v:1 },
+  { id:'quote',     label:'Quote',                w:5.0,    v:0 },
+  { id:'share',     label:'Share',                w:2.118,  v:0 },
+  { id:'dm',        label:'Send it in a DM',      w:5.0,    v:0 },
+  { id:'copy',      label:'Copy the link',        w:20.0,   v:0 },
+  { id:'follow',    label:'Follow you',           w:4.0,    v:0 },
+  { id:'click',     label:'Click the post',       w:0.274,  v:8 },
+  { id:'link',      label:'Open a link in it',    w:0.2,    v:0 },
+  { id:'notint',    label:'Tap Not interested',   w:-53.07, v:0 },
+  { id:'mute',      label:'Mute you',             w:-58.8,  v:0 },
+  { id:'block',     label:'Block you',            w:-31.2,  v:0 },
+  { id:'report',    label:'Report it',            w:-234.0, v:0 },
+];
+const MUTUAL_REPLY_BOOST = 15.0, OON = 0.75, DECAY = 0.5, FLOOR = 0.25;
+const $ = id => document.getElementById(id);
+
+$('rows').innerHTML = ACTIONS.map(a => `
+  <div class="row ${a.w < 0 ? 'neg' : ''}">
+    <label for="r_${a.id}">${a.label}</label>
+    <input type="range" id="r_${a.id}" min="0" max="${a.w < -10 ? 5 : 30}" step="${a.w < -10 ? 0.1 : 0.5}" value="${a.v}">
+    <output id="o_${a.id}">${a.v}</output>
+    <span class="w">x ${a.w}</span>
+  </div>`).join('');
+
+function calc() {
+  const follows = $('follows').checked, original = $('original').checked;
+  const mutual = $('mutual').checked && follows;
+  let total = 0; const parts = [];
+  for (const a of ACTIONS) {
+    const n = parseFloat($('r_' + a.id).value); $('o_' + a.id).textContent = n;
+    let w = a.w;
+    if (a.id === 'reply' && mutual && original) w += MUTUAL_REPLY_BOOST;
+    const c = (n / 100) * w; total += c; parts.push({ label:a.label, c });
+  }
+  const pos = parseInt($('pos').value, 10);
+  const div = Math.max(FLOOR, Math.pow(DECAY, pos));
+  const oon = follows ? 1 : OON;
+  const final = total * div * oon;
+  $('score').textContent = final.toFixed(2);
+  $('score').classList.toggle('bad', final < 0);
+  const m = [];
+  if (!follows) m.push('x 0.75 because the viewer doesn’t follow you');
+  if (div < 1) m.push('x ' + div + ' because it isn’t your first post in this feed');
+  if (mutual && original) m.push('reply weight is 20 instead of 5 for mutuals');
+  $('mult').textContent = m.length ? m.join(' · ') : 'No adjustments applied';
+  const max = Math.max(0.01, ...parts.map(p => Math.abs(p.c)));
+  $('bars').innerHTML = parts.filter(p => p.c !== 0).sort((a, b) => Math.abs(b.c) - Math.abs(a.c)).map(p => {
+    const wpct = Math.abs(p.c) / max * 50;
+    const left = p.c >= 0 ? 50 : 50 - wpct;
+    return `<div class="bar"><span>${p.label}</span><div class="track"><div class="fill" style="left:${left}%;width:${wpct}%;background:${p.c >= 0 ? 'var(--pos)' : 'var(--neg)'}"></div></div><span>${p.c >= 0 ? '+' : ''}${p.c.toFixed(2)}</span></div>`;
+  }).join('') || '<div class="mult">Move a slider to see what adds up.</div>';
+}
+document.querySelectorAll('input, select').forEach(e => e.addEventListener('input', calc));
+calc();
+</script>
+</body>
+</html>
